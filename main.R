@@ -48,7 +48,7 @@ m <- glmer(outcome ~ (1 | user_id)  + opportunity, d_afm %>% filter(tutor!='Stoi
 sjPlot::tab_model(m)
 
 d_ifa <- d_afm %>%
-  #filter(high_pk=='high') %>% # tweak this for low vs. high prior knowledge analysis
+  filter(high_pk=='low') %>% # tweak this for low vs. high prior knowledge analysis
   filter(tutor=='Stoich') %>%
   group_by(user_id, kc_default, prior_feedback) %>%
   arrange(time) %>%
