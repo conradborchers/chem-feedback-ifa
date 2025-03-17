@@ -1,7 +1,7 @@
 library(tidyverse)
 library(lme4)
 
-d_ref <- read.csv('Feedback zugeordnet - Tabellenblatt3.csv', header=FALSE) %>%
+d_ref <- read.csv('Doppelcodierung - final.csv', header=TRUE) %>%
   tibble() %>%
   `colnames<-`(c('feedback_text', 'feedback_category')) %>%
   mutate(feedback_category = tolower(feedback_category)) %>%
@@ -11,6 +11,10 @@ d_ref <- read.csv('Feedback zugeordnet - Tabellenblatt3.csv', header=FALSE) %>%
 d_pk <- read_csv('Auswertung - scores.csv') %>%
   rename(user_id = user) %>%
   mutate(high_pk = ifelse(overall > median(overall, na.rm=TRUE), 'high', 'low'))
+
+d_pk %>%
+  group_by(high_pk) %>%
+  summarize(mean(overall), sd(overall))
 
 d_log <- read_csv('Cleaned Log Data - Blatt 1 - log-data-precourse-st.csv', skip = 1) %>%
   mutate(feedback_text = coalesce(feedback_text...25, feedback_text...54)) %>%
@@ -37,18 +41,10 @@ d_afm <- d_log %>%
   mutate(high_pk = ifelse(is.na(high_pk), 'missing', high_pk))
 
 m <- glmer(outcome ~ (1 | user_id) + (1 | kc_default) + opportunity, d_afm %>% filter(tutor=='Stoich'), family='binomial', nAGQ=0, verbose=2)
-sjPlot::tab_model(m)
-
-m <- glmer(outcome ~ (1 | user_id) + (1 | kc_default) + opportunity, d_afm %>% filter(tutor=='Stoich') %>%
-             filter(high_pk=='low'), family='binomial', nAGQ=0, verbose=2)
-sjPlot::tab_model(m)
-
-# Hard to model performance in ORCCA without a skill model
-m <- glmer(outcome ~ (1 | user_id)  + opportunity, d_afm %>% filter(tutor!='Stoich'), family='binomial', nAGQ=0, verbose=2)
-sjPlot::tab_model(m)
+#sjPlot::tab_model(m)
 
 d_ifa <- d_afm %>%
-  filter(high_pk=='low') %>% # tweak this for low vs. high prior knowledge analysis
+ #filter(high_pk=='high') %>% # tweak this for low vs. high prior knowledge analysis
   filter(tutor=='Stoich') %>%
   group_by(user_id, kc_default, prior_feedback) %>%
   arrange(time) %>%
@@ -68,14 +64,17 @@ d_ifa %>%
     explicit_correction,
       correctness_feedback,
       indirect_feedback,
-      metalinguistic_feedback,
-      elicitation
+      as_needed_feedback,
+      non_correcture_feedback
   )
 
 m_ifa <- glmer(outcome ~ (1 | user_id) + (1 | kc_default) + 
                  explicit_correction + 
                  correctness_feedback + 
                  indirect_feedback + 
-                 metalinguistic_feedback + 
-                 elicitation, d_ifa, family='binomial', nAGQ=0, verbose = 2)
+                 as_needed_feedback + 
+                 non_correcture_feedback, d_ifa, family='binomial', nAGQ=0, verbose = 2)
 sjPlot::tab_model(m_ifa)
+
+BIC(m)
+BIC(m_ifa)
